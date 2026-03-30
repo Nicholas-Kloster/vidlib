@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vidlib</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d0f0e;
+    --surface: #141716;
+    --surface-2: #1a1d1c;
+    --border: #2a2d2c;
+    --text: #c4ccc8;
+    --text-dim: #6b7370;
+    --text-bright: #e8ede9;
+    --accent: #2db2bf;
+    --accent-dim: #1a6b73;
+    --accent-glow: rgba(45, 178, 191, 0.08);
+  }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ─── Layout ─── */
+  .app { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 320px;
+    min-width: 320px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-header h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .sidebar-header .count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .sidebar-search {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-search input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .sidebar-search input:focus {
+    border-color: var(--accent-dim);
+  }
+
+  .sidebar-search input::placeholder {
+    color: var(--text-dim);
+  }
+
+  .sidebar-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .sidebar-list::-webkit-scrollbar { width: 4px; }
+  .sidebar-list::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .channel-group { margin-bottom: 4px; }
+
+  .channel-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 12px 20px 6px;
+  }
+
+  .sidebar-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-left: 2px solid transparent;
+  }
+
+  .sidebar-item:hover {
+    background: var(--surface-2);
+  }
+
+  .sidebar-item.active {
+    background: var(--accent-glow);
+    border-left-color: var(--accent);
+  }
+
+  .sidebar-item .title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 14px;
+    color: var(--text-bright);
+    line-height: 1.4;
+  }
+
+  .sidebar-item .meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 3px;
+  }
+
+  /* ─── Reader ─── */
+  .reader {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 60px 40px;
+    overflow-y: auto;
+  }
+
+  .reader-content {
+    max-width: 680px;
+    width: 100%;
+  }
+
+  .reader-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  .reader-title {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--text-bright);
+    line-height: 1.25;
+    margin-bottom: 16px;
+  }
+
+  .reader-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .reader-meta a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+
+  .reader-meta a:hover { opacity: 0.7; }
+
+  .reader-divider {
+    width: 40px;
+    height: 1px;
+    background: var(--border);
+    margin: 32px 0;
+  }
+
+  .reader-body p {
+    margin-bottom: 20px;
+    font-size: 17px;
+    color: var(--text);
+  }
+
+  .reader-body p:last-child { margin-bottom: 0; }
+
+  /* ─── Drop zone ─── */
+  .drop-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 15, 14, 0.92);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .drop-overlay.active { display: flex; }
+
+  .drop-overlay .drop-icon {
+    width: 64px;
+    height: 64px;
+    border: 2px dashed var(--accent);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+
+  .drop-overlay .drop-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--accent);
+  }
+
+  /* ─── File input ─── */
+  .load-btn {
+    margin: 12px 20px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .load-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--text);
+  }
+
+  .load-btn input { display: none; }
+
+  /* ─── Reading progress ─── */
+  .progress-bar {
+    position: fixed;
+    top: 0;
+    left: 320px;
+    right: 0;
+    height: 2px;
+    background: transparent;
+    z-index: 50;
+  }
+
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.1s;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .reader { padding: 24px 20px; }
+    .progress-bar { left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>📚 vidlib</h1>
+      <div class="count" id="count">Drop .md files or load a folder</div>
+    </div>
+    <div class="sidebar-search">
+      <input type="text" id="search" placeholder="Search library..." />
+    </div>
+    <div class="sidebar-list" id="list"></div>
+    <label class="load-btn">
+      Load markdown files
+      <input type="file" id="fileInput" multiple accept=".md" />
+    </label>
+  </aside>
+
+  <div class="progress-bar"><div class="fill" id="progress"></div></div>
+
+  <main class="reader" id="reader">
+    <div class="reader-empty" id="empty">
+      Drop your vidlib .md files here<br>
+      or click "Load markdown files" in the sidebar<br><br>
+      <span style="font-size:11px; opacity:0.5">
+        python vidlib.py &lt;youtube-url&gt;<br>
+        then open the .md files here
+      </span>
+    </div>
+    <div class="reader-content" id="content" style="display:none"></div>
+  </main>
+</div>
+
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-icon">📄</div>
+  <div class="drop-text">Drop .md files to add to library</div>
+</div>
+
+<script>
+const library = [];
+let activeIndex = -1;
+
+// ─── Markdown parsing (minimal, no deps) ───
+function parseFrontmatter(text) {
+  const meta = {};
+  if (!text.startsWith('---')) return { meta, body: text };
+  const end = text.indexOf('---', 3);
+  if (end < 0) return { meta, body: text };
+  const fm = text.slice(3, end).trim();
+  fm.split('\n').forEach(line => {
+    const idx = line.indexOf(':');
+    if (idx > 0) {
+      const key = line.slice(0, idx).trim();
+      let val = line.slice(idx + 1).trim();
+      if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+      meta[key] = val;
+    }
+  });
+  const body = text.slice(end + 3).trim();
+  return { meta, body };
+}
+
+function mdToHtml(md) {
+  // Strip the H1 title and meta line (we render those separately)
+  let lines = md.split('\n');
+  let body = [];
+  let skipHeader = true;
+  for (const line of lines) {
+    if (skipHeader) {
+      if (line.startsWith('# ') || line.startsWith('**') || line.startsWith('[Watch') || line.trim() === '---' || line.trim() === '') continue;
+      skipHeader = false;
+    }
+    body.push(line);
+  }
+  // Simple paragraph splitting
+  const text = body.join('\n').trim();
+  const paragraphs = text.split(/\n\n+/);
+  return paragraphs
+    .filter(p => p.trim())
+    .map(p => `<p>${p.replace(/\n/g, ' ').trim()}</p>`)
+    .join('\n');
+}
+
+function formatDate(dateStr) {
+  if (!dateStr || dateStr === 'unknown') return '';
+  try {
+    const y = dateStr.slice(0, 4);
+    const m = parseInt(dateStr.slice(4, 6)) - 1;
+    const d = dateStr.slice(6, 8);
+    const date = new Date(y, m, d);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch { return dateStr; }
+}
+
+// ─── Library management ───
+function addFile(name, content) {
+  const { meta, body } = parseFrontmatter(content);
+  const entry = {
+    filename: name,
+    title: meta.title || name.replace('.md', ''),
+    channel: meta.channel || 'Unknown',
+    date: meta.date || '',
+    url: meta.url || '',
+    duration: meta.duration || '',
+    reading_time: meta.reading_time || '',
+    body: body,
+    html: mdToHtml(body),
+    raw: content,
+  };
+  // Deduplicate
+  const existing = library.findIndex(e => e.title === entry.title && e.channel === entry.channel);
+  if (existing >= 0) library[existing] = entry;
+  else library.push(entry);
+}
+
+function renderSidebar(filter = '') {
+  const list = document.getElementById('list');
+  const q = filter.toLowerCase();
+  const filtered = library.filter(e =>
+    !q || e.title.toLowerCase().includes(q) || e.channel.toLowerCase().includes(q) || e.body.toLowerCase().includes(q)
+  );
+
+  // Group by channel
+  const groups = {};
+  filtered.forEach((e, i) => {
+    const origIdx = library.indexOf(e);
+    groups[e.channel] = groups[e.channel] || [];
+    groups[e.channel].push({ ...e, idx: origIdx });
+  });
+
+  let html = '';
+  Object.keys(groups).sort().forEach(ch => {
+    html += `<div class="channel-group">`;
+    html += `<div class="channel-name">${ch}</div>`;
+    groups[ch].forEach(e => {
+      const active = e.idx === activeIndex ? ' active' : '';
+      const meta = [e.duration, e.reading_time].filter(Boolean).join(' → ');
+      html += `<div class="sidebar-item${active}" data-idx="${e.idx}">`;
+      html += `<div class="title">${e.title}</div>`;
+      if (meta) html += `<div class="meta">${meta}</div>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+
+  list.innerHTML = html;
+  document.getElementById('count').textContent = `${library.length} transcript${library.length !== 1 ? 's' : ''}`;
+
+  // Click handlers
+  list.querySelectorAll('.sidebar-item').forEach(el => {
+    el.addEventListener('click', () => {
+      activeIndex = parseInt(el.dataset.idx);
+      renderReader();
+      renderSidebar(document.getElementById('search').value);
+    });
+  });
+}
+
+function renderReader() {
+  const empty = document.getElementById('empty');
+  const content = document.getElementById('content');
+
+  if (activeIndex < 0 || activeIndex >= library.length) {
+    empty.style.display = 'flex';
+    content.style.display = 'none';
+    return;
+  }
+
+  const e = library[activeIndex];
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
+  const dateFmt = formatDate(e.date);
+  const metaParts = [e.channel, dateFmt, e.duration ? `${e.duration} video` : '', e.reading_time].filter(Boolean);
+  const urlHtml = e.url ? ` · <a href="${e.url}" target="_blank" rel="noopener">Watch ↗</a>` : '';
+
+  content.innerHTML = `
+    <h1 class="reader-title">${e.title}</h1>
+    <div class="reader-meta">${metaParts.join(' · ')}${urlHtml}</div>
+    <div class="reader-divider"></div>
+    <div class="reader-body">${e.html}</div>
+  `;
+
+  // Scroll to top
+  document.getElementById('reader').scrollTo(0, 0);
+}
+
+// ─── Reading progress ───
+document.getElementById('reader').addEventListener('scroll', () => {
+  const reader = document.getElementById('reader');
+  const pct = reader.scrollTop / (reader.scrollHeight - reader.clientHeight) * 100;
+  document.getElementById('progress').style.width = Math.min(100, pct) + '%';
+});
+
+// ─── Search ───
+document.getElementById('search').addEventListener('input', (e) => {
+  renderSidebar(e.target.value);
+});
+
+// ─── File loading ───
+function handleFiles(files) {
+  let loaded = 0;
+  Array.from(files).forEach(file => {
+    if (!file.name.endsWith('.md') || file.name === 'index.md') return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      addFile(file.name, e.target.result);
+      loaded++;
+      if (loaded === files.length || loaded === Array.from(files).filter(f => f.name.endsWith('.md')).length) {
+        renderSidebar();
+        if (library.length > 0 && activeIndex < 0) {
+          activeIndex = 0;
+          renderReader();
+          renderSidebar();
+        }
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  handleFiles(e.target.files);
+});
+
+// ─── Drag & drop ───
+const overlay = document.getElementById('dropOverlay');
+let dragCounter = 0;
+
+document.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  dragCounter++;
+  overlay.classList.add('active');
+});
+
+document.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter <= 0) {
+    overlay.classList.remove('active');
+    dragCounter = 0;
+  }
+});
+
+document.addEventListener('dragover', (e) => e.preventDefault());
+
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  overlay.classList.remove('active');
+  dragCounter = 0;
+  handleFiles(e.dataTransfer.files);
+});
+
+// ─── Keyboard nav ───
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowDown' && activeIndex < library.length - 1) {
+    activeIndex++;
+    renderReader();
+    renderSidebar(document.getElementById('search').value);
+  } else if (e.key === 'ArrowUp' && activeIndex > 0) {
+    activeIndex--;
+    renderReader();
+    renderSidebar(document.getElementById('search').value);
+  } else if (e.key === '/' || (e.key === 'f' && (e.metaKey || e.ctrlKey))) {
+    e.preventDefault();
+    document.getElementById('search').focus();
+  }
+});
+</script>
+</body>
+</html>
